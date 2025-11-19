@@ -2,8 +2,6 @@
 
 A modern, browser-based physics simulation of light refraction and total internal reflection. Designed to demonstrate Snell's Law intuitively and visually.
 
-![Project Screenshot](https://via.placeholder.com/800x400?text=Light+Refraction+Screenshot)
-
 ## 🌟 Features
 
 *   **Realistic Ray Tracing:** The path of the light beam is calculated precisely according to Snell's Law ($n_1 \sin \theta_1 = n_2 \sin \theta_2$).
@@ -53,4 +51,4 @@ Where:
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE.txt) file for details.
+This project is licensed under the MIT License. See the [LICENSE](https://github.com/arjunder/valon-taittuminen?tab=MIT-1-ov-file) file for details.
