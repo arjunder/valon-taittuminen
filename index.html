@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Valon taittuminen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Cyberpunk / Glassmorphism Palette */
+            --bg-deep: #020617; /* Slate 950 */
+            --bg-panel: rgba(15, 23, 42, 0.65); /* Slate 900 transparent */
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-highlight: rgba(255, 255, 255, 0.05);
+            
+            --primary-accent: #38bdf8; /* Sky 400 */
+            --primary-glow: rgba(56, 189, 248, 0.4);
+            
+            --laser-color: #fbbf24; /* Warm Yellow/Amber Beam */
+            --laser-core: #ffffff;
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            
+            --font-ui: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
+            --control-radius: 12px;
+            --panel-radius: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Canvas Area --- */
+        #simulation-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
+            cursor: crosshair;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- Floating Glass UI --- */
+        .glass-panel {
+            background: var(--bg-panel);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-radius: var(--panel-radius);
+            padding: 1.5rem;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        /* Header / Top Bar */
+        .top-bar {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            right: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none; /* Let clicks pass through to canvas where empty */
+            z-index: 100;
+        }
+
+        .app-title {
+            pointer-events: auto;
+            background: rgba(2, 6, 23, 0.8);
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .app-title h1 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .app-title span {
+            color: var(--primary-accent);
+            font-size: 0.8em;
+            text-transform: uppercase;
+            border: 1px solid var(--primary-accent);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        .action-buttons {
+            pointer-events: auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .icon-btn {
+            background: var(--bg-panel);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        .icon-btn:hover {
+            background: var(--primary-accent);
+            border-color: var(--primary-accent);
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .icon-btn svg {
+            transition: transform 0.3s ease;
+        }
+        
+        .rotate-180 svg {
+            transform: rotate(180deg);
+        }
+
+        /* Controls Drawer (Left/Bottom) */
+        .controls {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 1.5rem;
+            width: 340px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+            z-index: 90;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .section-header {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-header::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--glass-border);
+        }
+
+        /* Custom Inputs */
+        .input-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .value-display {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--primary-accent);
+            background: rgba(0,0,0,0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        /* Cyberpunk Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: var(--text-main);
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+            transition: transform 0.1s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: var(--primary-accent);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: var(--glass-border);
+            border-radius: 2px;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* Select Box */
+        select {
+            width: 100%;
+            padding: 0.6rem;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--primary-accent);
+        }
+
+        /* Data Overlay (Top Right) */
+        .data-overlay {
+            position: absolute;
+            top: 5rem;
+            right: 1.5rem;
+            width: 240px;
+            pointer-events: none;
+            z-index: 80;
+        }
+
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .tir-alert {
+            margin-top: 1rem;
+            background: rgba(220, 38, 38, 0.25);
+            border: 1px solid #ef4444;
+            color: #fecaca;
+            padding: 0.6rem;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+            display: none;
+            /* No pulse animation for professional look */
+        }
+
+        .tir-alert.visible {
+            display: block;
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 200;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-backdrop.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: #0f172a;
+            border: 1px solid var(--glass-border);
+            width: 90%;
+            max-width: 480px;
+            max-height: 85vh; /* Ensure fits on mobile screens */
+            overflow-y: auto; /* Scrollable content */
+            padding: 1.5rem;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(56, 189, 248, 0.1);
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-content h2 {
+            color: var(--primary-accent);
+            margin-bottom: 1rem;
+        }
+        
+        .modal-content p {
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .social-link {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .social-link a {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: color 0.2s, transform 0.2s;
+        }
+        
+        .social-link a:hover {
+            color: var(--primary-accent);
+            transform: translateY(-1px);
+        }
+
+        /* Animations */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(244, 63, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .controls {
+                width: 100%;
+                left: 0;
+                bottom: 0;
+                border-radius: 20px 20px 0 0;
+                border-bottom: none;
+                max-height: 40vh;
+            }
+            .data-overlay {
+                top: auto;
+                bottom: 42vh; /* Position above controls */
+                right: 1rem;
+                width: auto;
+                background: rgba(15, 23, 42, 0.8);
+            }
+            .app-title span { display: none; }
+            .modal-content {
+                width: 95%;
+                padding: 1.25rem;
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="top-bar">
+        <div class="glass-panel app-title">
+            <h1>Valon taittuminen <span>DEMO</span></h1>
+        </div>
+        <div class="action-buttons">
+            <button class="icon-btn" id="btn-swap" aria-label="Vaihda suunta" title="Vaihda valon suunta ja väliaineet">
+                <!-- Arrow Up-Down Icon -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M7 17l5 5 5-5"></path>
+                    <path d="M12 22V2"></path>
+                </svg>
+            </button>
+            <button class="icon-btn" id="btn-protractor" aria-label="Astelevy" title="Näytä/Piilota Astelevy">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22v-9"></path>
+                    <path d="M2 22h20"></path>
+                    <path d="M2 22a10 10 0 0 1 20 0"></path>
+                </svg>
+            </button>
+            <button class="icon-btn" id="btn-reset" aria-label="Nollaa" title="Palauta oletusarvot">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                </svg>
+            </button>
+            <button class="icon-btn" id="btn-info" aria-label="Ohje" title="Ohje ja tiedot">
+                <!-- Question Mark Icon -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <div id="simulation-container">
+        <canvas id="simCanvas"></canvas>
+
+        <!-- Data Display (Floating) -->
+        <div class="glass-panel data-overlay">
+            <div class="section-header">Mittaukset</div>
+            <div class="data-item">
+                <span>Tulokulma (&theta;<sub>1</sub>)</span>
+                <span id="disp-theta1" class="value-display">30.0&deg;</span>
+            </div>
+            <div class="data-item">
+                <span>Taittumiskulma (&theta;<sub>2</sub>)</span>
+                <span id="disp-theta2" class="value-display">--</span>
+            </div>
+            <div class="data-item">
+                <span>Suhde (n<sub>1</sub>/n<sub>2</sub>)</span>
+                <span id="disp-ratio" class="value-display">0.67</span>
+            </div>
+            <div id="tir-alert" class="tir-alert">
+                &#9888; KOKONAISHEIJASTUMINEN
+            </div>
+        </div>
+
+        <!-- Controls (Drawer) -->
+        <aside class="glass-panel controls">
+            
+            <!-- Medium 1 -->
+            <div class="control-section">
+                <div class="section-header" id="header-mat1">Väliaine 1 (Tuleva / Ylhäällä)</div>
+                <select id="mat1">
+                    <option value="1.00">Ilma (n = 1.00)</option>
+                    <option value="1.33">Vesi (n = 1.33)</option>
+                    <option value="1.50">Lasi (n = 1.50)</option>
+                    <option value="2.42">Timantti (n = 2.42)</option>
+                    <option value="custom">Muu...</option>
+                </select>
+                <div class="input-row">
+                    <label>Taitekerroin (n<sub>1</sub>)</label>
+                    <span id="val-n1" class="value-display">1.00</span>
+                </div>
+                <input type="range" id="slider-n1" min="1.00" max="3.00" step="0.01" value="1.00" disabled>
+            </div>
+
+            <!-- Medium 2 -->
+            <div class="control-section">
+                <div class="section-header" id="header-mat2">Väliaine 2 (Taittuva / Alhaalla)</div>
+                <select id="mat2">
+                    <option value="1.00">Ilma (n = 1.00)</option>
+                    <option value="1.33">Vesi (n = 1.33)</option>
+                    <option value="1.50" selected>Lasi (n = 1.50)</option>
+                    <option value="2.42">Timantti (n = 2.42)</option>
+                    <option value="custom">Muu...</option>
+                </select>
+                <div class="input-row">
+                    <label>Taitekerroin (n<sub>2</sub>)</label>
+                    <span id="val-n2" class="value-display">1.50</span>
+                </div>
+                <input type="range" id="slider-n2" min="1.00" max="3.00" step="0.01" value="1.50" disabled>
+            </div>
+
+            <!-- Light Source -->
+            <div class="control-section">
+                <div class="section-header">Valonlähde</div>
+                <div class="input-row">
+                    <label>Kulma</label>
+                    <span id="val-angle" class="value-display">30.0°</span>
+                </div>
+                <input type="range" id="slider-angle" min="0" max="90" step="0.1" value="30.0">
+            </div>
+        </aside>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="info-modal" class="modal-backdrop">
+        <div class="glass-panel modal-content">
+            <button class="modal-close" id="close-modal">&times;</button>
+            <h2>Tietoja simulaatiosta</h2>
+            <p>Tämä simulaatio havainnollistaa valon taittumista kahden optisen aineen rajapinnassa <strong>Snellin lain</strong> mukaisesti:</p>
+            <div style="text-align:center; font-family: 'Times New Roman', serif; font-style: italic; font-size: 1.3rem; background:rgba(0,0,0,0.3); padding:15px; border-radius:8px; margin-bottom: 1rem; color: #fff;">
+                <div style="display: inline-block; vertical-align: middle; text-align: center;">
+                    <div style="border-bottom: 1px solid #fff; padding-bottom: 3px; margin-bottom: 3px;">sin &alpha;<sub>1</sub></div>
+                    <div>sin &alpha;<sub>2</sub></div>
+                </div>
+                <span style="margin: 0 10px; font-style: normal;">=</span>
+                <div style="display: inline-block; vertical-align: middle; text-align: center;">
+                    <div style="border-bottom: 1px solid #fff; padding-bottom: 3px; margin-bottom: 3px;">n<sub>2</sub></div>
+                    <div>n<sub>1</sub></div>
+                </div>
+            </div>
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.6;">
+                <p style="margin-bottom: 0.5rem; font-weight: 600;">Kaavan suureet:</p>
+                <ul style="list-style: none; padding-left: 0; margin-bottom: 1rem; display: grid; gap: 4px;">
+                    <li><strong>n<sub>1</sub></strong> : Tulevan aineen taitekerroin</li>
+                    <li><strong>n<sub>2</sub></strong> : Taittuvan aineen taitekerroin</li>
+                    <li><strong>&alpha;<sub>1</sub></strong> : Tulokulma (valon ja normaalin välinen kulma)</li>
+                    <li><strong>&alpha;<sub>2</sub></strong> : Taitekulma</li>
+                </ul>
+                <p>Laki pätee, kun valo siirtyy kahden optisen aineen rajapinnan läpi taittuen.</p>
+            </div>
+            <p><strong>Ominaisuudet:</strong></p>
+            <ul style="margin-left: 1.5rem; color: var(--text-muted); line-height: 1.6;">
+                <li>Raahaa lasersädettä hiirellä tai sormella.</li>
+                <li>Käytä "Vaihda suunta" -nappia kääntääksesi valon kulkemaan alhaalta ylös.</li>
+                <li>Käytä oikean yläkulman astelevyä kulmien mittaamiseen.</li>
+                <li>Huomaa "Kokonaisheijastuminen", kun valo tulee tiheämmästä aineesta harvempaan tarpeeksi suuressa kulmassa.</li>
+            </ul>
+            <div class="social-link">
+                <a href="https://www.instagram.com/nollasta_laakikseen" target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                    </svg>
+                    @nollasta_laakikseen
+                </a>
+            </div>
+        </div>
+    </div>
+
+<script>
+/**
+ * Light Refraction Simulation
+ * Designed for performance and clarity.
+ */
+
+class LightSimulation {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimization
+        
+        // State
+        this.state = {
+            n1: 1.00,
+            n2: 1.50,
+            angleDeg: 30.0, // Angle from Normal (0-90)
+            direction: 1,   // 1 = Top->Down, -1 = Bottom->Up
+            showProtractor: false,
+            isDragging: false,
+            width: 0,
+            height: 0
+        };
+
+        // Animation props
+        this.particles = [];
+        this.lastFrameTime = 0;
+        
+        // Bindings
+        this.resize = this.resize.bind(this);
+        this.animate = this.animate.bind(this);
+        this.handleStart = this.handleStart.bind(this);
+        this.handleMove = this.handleMove.bind(this);
+        this.handleEnd = this.handleEnd.bind(this);
+
+        // Init
+        this.initEventListeners();
+        this.resize();
+        this.animate(0);
+    }
+
+    initEventListeners() {
+        window.addEventListener('resize', this.resize);
+        
+        // Mouse
+        this.canvas.addEventListener('mousedown', this.handleStart);
+        window.addEventListener('mousemove', this.handleMove);
+        window.addEventListener('mouseup', this.handleEnd);
+        
+        // Touch
+        this.canvas.addEventListener('touchstart', (e) => this.handleStart(e.touches[0]), {passive: false});
+        window.addEventListener('touchmove', (e) => {
+            if (this.state.isDragging) e.preventDefault(); // Prevent scroll while dragging laser
+            this.handleMove(e.touches ? e.touches[0] : e);
+        }, {passive: false});
+        window.addEventListener('touchend', this.handleEnd);
+    }
+
+    resize() {
+        const parent = this.canvas.parentElement;
+        this.canvas.width = parent.clientWidth;
+        this.canvas.height = parent.clientHeight;
+        this.state.width = this.canvas.width;
+        this.state.height = this.canvas.height;
+    }
+
+    // --- Interaction Logic ---
+
+    handleStart(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const { height, direction } = this.state;
+        
+        // Hit detection: 
+        // If direction is 1 (Down), light is in Top half (y < h/2)
+        // If direction is -1 (Up), light is in Bottom half (y > h/2)
+        const isTopHalf = y < height / 2;
+        const canDrag = (direction === 1 && isTopHalf) || (direction === -1 && !isTopHalf);
+
+        if (canDrag) {
+            this.state.isDragging = true;
+            this.updateAngleFromInput(x, y);
+        }
+    }
+
+    handleMove(e) {
+        if (!this.state.isDragging) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        this.updateAngleFromInput(x, y);
+    }
+
+    handleEnd() {
+        this.state.isDragging = false;
+    }
+
+    updateAngleFromInput(x, y) {
+        const cx = this.state.width / 2;
+        const cy = this.state.height / 2;
+        const dir = this.state.direction;
+        
+        // Calculate vector from center to mouse
+        const dx = x - cx;
+        const dy = y - cy;
+
+        // Ensure we are dragging on the correct side
+        if ((dir === 1 && dy > 0) || (dir === -1 && dy < 0)) return;
+
+        // Simplified: Angle from the vertical normal line
+        let angleRad = Math.atan2(dx, -dy * dir); 
+        let angleDeg = angleRad * (180 / Math.PI);
+        
+        // Clamp to +/- 90 degrees for physics
+        if (angleDeg > 90) angleDeg = 90;
+        if (angleDeg < -90) angleDeg = -90;
+
+        this.updateState({ angleDeg: Math.abs(angleDeg) });
+    }
+
+    updateState(newState) {
+        this.state = { ...this.state, ...newState };
+        const event = new CustomEvent('sim-update', { detail: this.state });
+        window.dispatchEvent(event);
+    }
+
+    toggleDirection() {
+        // Swap materials AND Direction
+        const { n1, n2, direction } = this.state;
+        this.updateState({ 
+            n1: n2,
+            n2: n1,
+            direction: direction * -1 
+        });
+    }
+
+    // --- Physics & Rendering ---
+
+    animate(timestamp) {
+        const dt = timestamp - this.lastFrameTime;
+        this.lastFrameTime = timestamp;
+
+        this.draw(dt);
+        requestAnimationFrame(this.animate);
+    }
+
+    draw(dt) {
+        const { width: w, height: h, n1, n2, angleDeg, showProtractor, direction } = this.state;
+        const ctx = this.ctx;
+        const cx = w / 2;
+        const cy = h / 2;
+
+        // 1. Backgrounds (Media)
+        ctx.clearRect(0, 0, w, h);
+        
+        const matTop = direction === 1 ? n1 : n2;
+        const matBot = direction === 1 ? n2 : n1;
+        
+        // Top Rect
+        const alphaTop = Math.max(0.05, (matTop - 1) * 0.15);
+        ctx.fillStyle = `rgba(56, 189, 248, ${alphaTop})`;
+        ctx.fillRect(0, 0, w, h/2);
+        
+        // Bottom Rect
+        const alphaBot = Math.max(0.05, (matBot - 1) * 0.15);
+        ctx.fillStyle = `rgba(56, 189, 248, ${alphaBot})`;
+        ctx.fillRect(0, h/2, w, h/2);
+
+        // 2. Grid / Interface
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.beginPath();
+        // Horizontal interface
+        ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+        ctx.stroke();
+
+        // Normal Line
+        ctx.beginPath();
+        ctx.setLineDash([6, 6]);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.moveTo(cx, 50); ctx.lineTo(cx, h - 50);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 3. Physics Calc
+        const theta1Rad = angleDeg * (Math.PI / 180);
+        const sinTheta2 = (n1 / n2) * Math.sin(theta1Rad);
+        let theta2Rad = Math.asin(sinTheta2);
+        let isTIR = Math.abs(sinTheta2) > 1.0;
+
+        // 4. Rays & Arcs Logic
+        // Canvas Coords: 0=Right, PI/2=Down, PI=Left, -PI/2=Up
+        const rayLen = Math.max(w, h); // Ensure infinite length visually
+        const laserColor = '#fbbf24'; // CHANGED: Warm Yellow Beam
+
+        // --- Incident Ray (Always from Left) ---
+        let incStartX, incStartY;
+        let incRayAngle, incNormalAngle;
+
+        if (direction === 1) {
+            // Down (Source Top-Left)
+            // Normal is Up (-PI/2)
+            incNormalAngle = -Math.PI / 2;
+            // Ray Angle = -PI/2 - theta1
+            incRayAngle = -Math.PI / 2 - theta1Rad;
+            
+            incStartX = cx + Math.cos(incRayAngle) * rayLen;
+            incStartY = cy + Math.sin(incRayAngle) * rayLen;
+            
+            // Draw Arc: From Normal to Ray (Counter-Clockwise)
+            this.drawAngleArc(cx, cy, incNormalAngle, incRayAngle, `${angleDeg.toFixed(1)}°`);
+
+        } else {
+            // Up (Source Bottom-Left)
+            // Normal is Down (PI/2)
+            incNormalAngle = Math.PI / 2;
+            // Ray Angle = PI/2 + theta1 (moving towards Left/PI)
+            incRayAngle = Math.PI / 2 + theta1Rad;
+
+            incStartX = cx + Math.cos(incRayAngle) * rayLen;
+            incStartY = cy + Math.sin(incRayAngle) * rayLen;
+
+            // Draw Arc: From Normal to Ray (Clockwise)
+            this.drawAngleArc(cx, cy, incNormalAngle, incRayAngle, `${angleDeg.toFixed(1)}°`);
+        }
+
+        // Draw Incident Ray (From Start to Center)
+        this.drawRay(incStartX, incStartY, cx, cy, laserColor, true, 1.0);
+
+
+        // --- Reflected Ray (Always to Left) ---
+        // Reflects symmetrically on the Left side
+        let refEndX, refEndY;
+        let refRayAngle;
+
+        if (direction === 1) {
+            refRayAngle = -Math.PI / 2 + theta1Rad;
+        } else {
+            refRayAngle = Math.PI / 2 - theta1Rad;
+        }
+
+        refEndX = cx + Math.cos(refRayAngle) * rayLen;
+        refEndY = cy + Math.sin(refRayAngle) * rayLen;
+
+        const reflectAlpha = isTIR ? 1.0 : (Math.abs(n1-n2)*0.5 + 0.1);
+        this.drawRay(cx, cy, refEndX, refEndY, laserColor, isTIR, reflectAlpha);
+
+
+        // --- Refracted Ray (Goes Through to Right) ---
+        // Snell's Law.
+        if (!isTIR) {
+            let refrEndX, refrEndY;
+            let refrRayAngle, refrNormalAngle;
+
+            if (direction === 1) {
+                // Down. Goes to Bottom-Right.
+                refrNormalAngle = Math.PI / 2;
+                refrRayAngle = Math.PI / 2 - theta2Rad;
+                
+                refrEndX = cx + Math.cos(refrRayAngle) * rayLen;
+                refrEndY = cy + Math.sin(refrRayAngle) * rayLen;
+                
+                this.drawAngleArc(cx, cy, refrNormalAngle, refrRayAngle, `${(theta2Rad * 180/Math.PI).toFixed(1)}°`);
+
+            } else {
+                // Up. Goes to Top-Right.
+                refrNormalAngle = -Math.PI / 2;
+                refrRayAngle = -Math.PI / 2 + theta2Rad;
+
+                refrEndX = cx + Math.cos(refrRayAngle) * rayLen;
+                refrEndY = cy + Math.sin(refrRayAngle) * rayLen;
+
+                this.drawAngleArc(cx, cy, refrNormalAngle, refrRayAngle, `${(theta2Rad * 180/Math.PI).toFixed(1)}°`);
+            }
+
+            this.drawRay(cx, cy, refrEndX, refrEndY, laserColor, true, 0.8);
+            
+            // Particles Refract
+             this.updateParticles(incStartX, incStartY, cx, cy, refEndX, refEndY, refrEndX, refrEndY, dt, isTIR);
+
+        } else {
+             // Particles TIR (only reflect)
+             this.updateParticles(incStartX, incStartY, cx, cy, refEndX, refEndY, null, null, dt, isTIR);
+        }
+
+
+        // 5. Protractor
+        if (showProtractor) {
+            this.drawProtractor(cx, cy);
+        }
+    }
+
+    drawRay(x1, y1, x2, y2, color, glow = false, opacity = 1.0) {
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineCap = 'round';
+
+        // Clean, solid beam (No glow/blur)
+        ctx.shadowBlur = 0;
+
+        // Outer aura
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = opacity * 0.4;
+        ctx.lineWidth = 5;
+        ctx.stroke();
+
+        // Inner core (white hot)
+        ctx.strokeStyle = '#ffffff';
+        ctx.globalAlpha = opacity;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+
+    drawAngleArc(cx, cy, startRad, endRad, label) {
+        // Only draw if angle is significant
+        if (Math.abs(startRad - endRad) < 0.05) return;
+
+        const ctx = this.ctx;
+        const r = 60;
+        ctx.save();
+        
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 2;
+        
+        // Check difference. If end < start, usually CCW.
+        let ccw = endRad < startRad;
+        
+        ctx.arc(cx, cy, r, startRad, endRad, ccw);
+        ctx.stroke();
+        
+        // Text Logic
+        // Calculate mid angle correctly handling the wrap-around or direction
+        let midAngle = (startRad + endRad) / 2;
+        
+        // Position text
+        const txtX = cx + Math.cos(midAngle) * (r + 25);
+        const txtY = cy + Math.sin(midAngle) * (r + 25);
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px Inter';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, txtX, txtY);
+        ctx.restore();
+    }
+
+    drawProtractor(cx, cy) {
+        const ctx = this.ctx;
+        const r = 150;
+        ctx.save();
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = '#ffffff';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#aaa';
+
+        for (let i = 0; i < 360; i += 10) {
+            const rad = i * (Math.PI / 180);
+            const isMajor = i % 90 === 0;
+            const tickLen = isMajor ? 15 : 8;
+            
+            const x1 = cx + Math.cos(rad) * r;
+            const y1 = cy + Math.sin(rad) * r;
+            const x2 = cx + Math.cos(rad) * (r - tickLen);
+            const y2 = cy + Math.sin(rad) * (r - tickLen);
+            
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            if (i % 30 === 0) {
+                const tx = cx + Math.cos(rad) * (r - 25);
+                const ty = cy + Math.sin(rad) * (r - 25);
+                let labelVal = Math.abs(i - 270) % 360; 
+                if (labelVal > 90 && labelVal < 270) labelVal = 180 - labelVal;
+                ctx.fillText(i, tx, ty);
+            }
+        }
+        ctx.restore();
+    }
+
+    updateParticles(sx, sy, cx, cy, rx, ry, rex, rey, dt, isTIR) {
+        const speed = 0.3 * dt;
+        const { direction } = this.state;
+        
+        if (this.particles.length < 20) {
+            this.particles.push({ t: Math.random(), type: 0 });
+        }
+
+        const ctx = this.ctx;
+        ctx.fillStyle = '#fff';
+
+        this.particles.forEach(p => {
+            p.t += speed * 0.001;
+            if (p.t > 1) {
+                p.t = 0;
+                // Randomly decide path at junction
+                // If TIR, always reflect (type 1)
+                // If not, split probability
+                if (isTIR) {
+                    p.type = Math.random() > 0.5 ? 0 : 1; 
+                } else {
+                    const r = Math.random();
+                    if (r < 0.4) p.type = 0; // incident loop
+                    else if (r < 0.6) p.type = 1; // reflect
+                    else p.type = 2; // refract
+                }
+            }
+
+            let x, y;
+            if (p.type === 0) { // Incident
+                x = sx + (cx - sx) * p.t;
+                y = sy + (cy - sy) * p.t;
+            } else if (p.type === 1) { // Reflect
+                x = cx + (rx - cx) * p.t;
+                y = cy + (ry - cy) * p.t;
+            } else if (p.type === 2 && rex !== null) { // Refract
+                x = cx + (rex - cx) * p.t;
+                y = cy + (rey - cy) * p.t;
+            } else {
+                return;
+            }
+
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+}
+
+/**
+ * UI Manager
+ * Handles DOM events and updates controls
+ */
+class UIManager {
+    constructor(sim) {
+        this.sim = sim;
+        
+        // Elements
+        this.els = {
+            mat1: document.getElementById('mat1'),
+            mat2: document.getElementById('mat2'),
+            slideN1: document.getElementById('slider-n1'),
+            slideN2: document.getElementById('slider-n2'),
+            slideAngle: document.getElementById('slider-angle'),
+            valN1: document.getElementById('val-n1'),
+            valN2: document.getElementById('val-n2'),
+            valAngle: document.getElementById('val-angle'),
+            
+            headerMat1: document.getElementById('header-mat1'),
+            headerMat2: document.getElementById('header-mat2'),
+            
+            dispTheta1: document.getElementById('disp-theta1'),
+            dispTheta2: document.getElementById('disp-theta2'),
+            dispRatio: document.getElementById('disp-ratio'),
+            tirAlert: document.getElementById('tir-alert'),
+            
+            btnSwap: document.getElementById('btn-swap'),
+            btnProtractor: document.getElementById('btn-protractor'),
+            btnReset: document.getElementById('btn-reset'),
+            btnInfo: document.getElementById('btn-info'),
+            
+            modal: document.getElementById('info-modal'),
+            closeModal: document.getElementById('close-modal')
+        };
+
+        this.initListeners();
+        this.bindSimEvents();
+    }
+
+    initListeners() {
+        const { els } = this;
+        
+        // Material Selects
+        els.mat1.addEventListener('change', (e) => this.handleMatChange(1, e.target.value));
+        els.mat2.addEventListener('change', (e) => this.handleMatChange(2, e.target.value));
+        
+        // Sliders
+        els.slideN1.addEventListener('input', (e) => this.updateParam('n1', e.target.value));
+        els.slideN2.addEventListener('input', (e) => this.updateParam('n2', e.target.value));
+        els.slideAngle.addEventListener('input', (e) => this.updateParam('angleDeg', e.target.value));
+        
+        // Top Buttons
+        els.btnSwap.addEventListener('click', () => {
+            this.sim.toggleDirection();
+        });
+
+        els.btnProtractor.addEventListener('click', () => {
+            this.sim.updateState({ showProtractor: !this.sim.state.showProtractor });
+            els.btnProtractor.style.background = this.sim.state.showProtractor ? 'var(--primary-accent)' : '';
+            els.btnProtractor.style.color = this.sim.state.showProtractor ? '#000' : '';
+        });
+        
+        els.btnReset.addEventListener('click', () => {
+            this.handleMatChange(1, "1.00");
+            this.handleMatChange(2, "1.50");
+            this.updateParam('angleDeg', 30.0);
+            // Reset Direction to Down (Default)
+            this.sim.updateState({ direction: 1 });
+            
+            els.mat1.value = "1.00";
+            els.mat2.value = "1.50";
+            els.slideAngle.value = 30.0;
+        });
+        
+        els.btnInfo.addEventListener('click', () => els.modal.classList.add('open'));
+        els.closeModal.addEventListener('click', () => els.modal.classList.remove('open'));
+        els.modal.addEventListener('click', (e) => {
+            if (e.target === els.modal) els.modal.classList.remove('open');
+        });
+    }
+
+    bindSimEvents() {
+        window.addEventListener('sim-update', (e) => {
+            const s = e.detail;
+            // Update UI components to reflect state (especially after Swap)
+            
+            // Sync Sliders/Inputs to State (Critical for Swap)
+            this.syncUIControls(s);
+            
+            this.updateDisplay(s);
+        });
+    }
+    
+    syncUIControls(state) {
+        // Only update DOM value if it differs significantly, or force it if we know it changed externally
+        // Actually, setting value always is fine for these small inputs.
+        this.els.slideN1.value = state.n1;
+        this.els.slideN2.value = state.n2;
+        this.els.slideAngle.value = state.angleDeg;
+        
+        // Update Selects if they match predefined values
+        this.setSelectValue(this.els.mat1, state.n1);
+        this.setSelectValue(this.els.mat2, state.n2);
+        
+        // Enable/Disable sliders based on select
+        this.els.slideN1.disabled = this.els.mat1.value !== 'custom';
+        this.els.slideN2.disabled = this.els.mat2.value !== 'custom';
+    }
+    
+    setSelectValue(select, nVal) {
+        // Check if nVal exists in options
+        let found = false;
+        for (let i=0; i<select.options.length; i++) {
+            const optVal = parseFloat(select.options[i].value);
+            if (Math.abs(optVal - nVal) < 0.001) {
+                select.value = select.options[i].value;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            select.value = 'custom';
+        }
+    }
+
+    handleMatChange(id, value) {
+        const slider = id === 1 ? this.els.slideN1 : this.els.slideN2;
+        const isCustom = value === 'custom';
+        
+        slider.disabled = !isCustom;
+        if (!isCustom) {
+            slider.value = value;
+            this.updateParam(id === 1 ? 'n1' : 'n2', value);
+        }
+    }
+
+    updateParam(key, value) {
+        const val = parseFloat(value);
+        this.sim.updateState({ [key]: val });
+        // Sim update event will trigger display sync
+    }
+
+    updateDisplay(state) {
+        const { n1, n2, angleDeg, direction } = state;
+        
+        this.els.valN1.textContent = n1.toFixed(2);
+        this.els.valN2.textContent = n2.toFixed(2);
+        this.els.valAngle.textContent = angleDeg.toFixed(1) + '°';
+        this.els.dispTheta1.textContent = angleDeg.toFixed(1) + '°';
+        
+        // Update Header Labels based on Direction
+        if (direction === 1) {
+            this.els.headerMat1.textContent = "Väliaine 1 (Tuleva / Ylhäällä)";
+            this.els.headerMat2.textContent = "Väliaine 2 (Taittuva / Alhaalla)";
+            this.els.btnSwap.classList.remove('rotate-180');
+        } else {
+            this.els.headerMat1.textContent = "Väliaine 1 (Tuleva / Alhaalla)";
+            this.els.headerMat2.textContent = "Väliaine 2 (Taittuva / Ylhäällä)";
+            this.els.btnSwap.classList.add('rotate-180');
+        }
+
+        // Calc Result for display
+        const theta1Rad = angleDeg * (Math.PI / 180);
+        const sinTheta2 = (n1 / n2) * Math.sin(theta1Rad);
+        const isTIR = Math.abs(sinTheta2) > 1.0;
+        
+        if (isTIR) {
+            this.els.dispTheta2.textContent = "--";
+            this.els.tirAlert.classList.add('visible');
+        } else {
+            const theta2Deg = Math.asin(sinTheta2) * (180 / Math.PI);
+            this.els.dispTheta2.textContent = theta2Deg.toFixed(1) + '°';
+            this.els.tirAlert.classList.remove('visible');
+        }
+        
+        this.els.dispRatio.textContent = (n1 / n2).toFixed(2);
+    }
+}
+
+// Bootstrap
+window.onload = () => {
+    const sim = new LightSimulation('simCanvas');
+    const ui = new UIManager(sim);
+};
+
+</script>
+</body>
+</html>
