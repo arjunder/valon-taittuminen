@@ -1,54 +1,56 @@
-# Valon Taittuminen - Interaktiivinen Laboratorio 🧪✨
+# Light Refraction - Interactive Lab 🧪✨
 
-Moderni, selainpohjainen fysiikkasimulaatio valon taittumisesta ja kokonaisheijastumisesta. Suunniteltu havainnollistamaan Snellin lakia intuitiivisesti ja visuaalisesti.
+A modern, browser-based physics simulation of light refraction and total internal reflection. Designed to demonstrate Snell's Law intuitively and visually.
 
-![Project Screenshot](https://via.placeholder.com/800x400?text=Valon+Taittuminen+Screenshot)
+![Project Screenshot](https://via.placeholder.com/800x400?text=Light+Refraction+Screenshot)
 
-## 🌟 Ominaisuudet
+## 🌟 Features
 
-*   **Realistinen säteenseuranta:** Valonsäteen kulku lasketaan tarkasti Snellin lain mukaan ($n_1 \sin \theta_1 = n_2 \sin \theta_2$).
-*   **Interaktiivinen käyttöliittymä:**
-    *   Raahaa valonlähdettä hiirellä tai kosketusnäytöllä.
-    *   Säädä taitekertoimia liukusäätimillä.
-    *   Vaihda valon suuntaa (ylös/alas) napin painalluksella.
-*   **Kokonaisheijastuminen (TIR):** Visuaalinen varoitus ja säteen käyttäytymisen muutos, kun kriittinen kulma ylittyy.
-*   **Työkalut:**
-    *   Sisäänrakennettu astelevy kulmien mittaamiseen.
-    *   Tietopaneeli, joka näyttää tarkat lukuarvot reaaliajassa.
-*   **Responsiivinen:** Toimii sujuvasti sekä työpöydällä että mobiililaitteilla.
-*   **Moderni ulkoasu:** Ammattimainen "Clean Lab" -tyyli (Light Theme).
+*   **Realistic Ray Tracing:** The path of the light beam is calculated precisely according to Snell's Law ($n_1 \sin \theta_1 = n_2 \sin \theta_2$).
+*   **Interactive Interface:**
+    *   Drag the light source with a mouse or touch.
+    *   Adjust refractive indices with sliders.
+    *   Switch light direction (up/down) with a button press.
+*   **Total Internal Reflection (TIR):** Visual alert and behavior change when the critical angle is exceeded.
+*   **Tools:**
+    *   Built-in protractor for measuring angles.
+    *   Data panel showing precise values in real-time.
+*   **Responsive:** Works smoothly on both desktop and mobile devices.
+*   **Modern Design:** Professional "Clean Lab" style.
 
-## 🚀 Käyttöönotto
+## 🚀 Getting Started
 
-Tämä projekti on toteutettu yhtenä itsenäisenä HTML-tiedostona (`index.html`), joten se ei vaadi asennusta tai palvelinta.
+This project is implemented as a single standalone HTML file (`index.html`), so it requires no installation or server.
 
-1.  Lataa repositorio tai `index.html` -tiedosto.
-2.  Avaa `index.html` missä tahansa modernissa selaimessa (Chrome, Firefox, Safari, Edge).
+1.  Download the repository or the `index.html` file.
+2.  Open `index.html` in any modern browser (Chrome, Firefox, Safari, Edge).
 
-## 🛠️ Teknologiat
+## 🛠️ Technologies
 
-*   **HTML5 Canvas:** Korkean suorituskyvyn 2D-grafiikka ja animaatiot.
-*   **Vanilla JavaScript (ES6+):** Oliopohjainen (OOP) rakenne ilman ulkoisia kirjastoja.
-*   **CSS3:** Moderni ulkoasu, Flexbox-asettelu ja responsiivisuus.
+*   **HTML5 Canvas:** High-performance 2D graphics and animations.
+*   **Vanilla JavaScript (ES6+):** Object-Oriented (OOP) structure with no external libraries.
+*   **CSS3:** Modern layout with Flexbox and full responsiveness.
 
-## 📚 Fysiikka
+## 📚 Physics
 
-Simulaatio perustuu Snellin lakiin:
+The simulation is based on Snell's Law:
 
-$$ \frac{\sin \alpha_1}{\sin \alpha_2} = \frac{n_2}{n_1} $$
+$$
+\frac{\sin \alpha_1}{\sin \alpha_2} = \frac{n_2}{n_1}
+$$
 
-Missä:
-*   $n_1, n_2$ = Väliaineiden taitekertoimet
-*   $\alpha_1$ = Tulokulma
-*   $\alpha_2$ = Taitekulma
+Where:
+*   $n_1, n_2$ = Refractive indices of the media
+*   $\alpha_1$ = Angle of incidence
+*   $\alpha_2$ = Angle of refraction
 
-## 👤 Tekijä
+## 👤 Author
 
-**Arto Kantonen**
+**Nollasta lääkikseen**
 
 *   GitHub: [@arjunder](https://github.com/arjunder)
 *   Instagram: [@nollasta_laakikseen](https://www.instagram.com/nollasta_laakikseen)
 
-## 📄 Lisenssi
+## 📄 License
 
-Tämä projekti on lisensoitu MIT-lisenssillä. Katso [LICENSE](LICENSE) -tiedosto lisätietoja varten.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE.txt) file for details.
