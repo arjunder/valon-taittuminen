@@ -1147,6 +1147,9 @@ class UIManager {
 
         this.initListeners();
         this.bindSimEvents();
+
+        // Calculate and display initial values immediately on load
+        this.updateDisplay(this.sim.state);
     }
 
     initListeners() {
@@ -1285,7 +1288,7 @@ class UIManager {
             this.els.tirAlert.classList.remove('visible');
         }
         
-        this.els.dispRatio.textContent = (n1 / n2).toFixed(2);
+        this.els.dispRatio.textContent = (n2 / n1).toFixed(2);
     }
 }
 
